@@ -52,13 +52,11 @@ namespace DozeAnywhere
                     ModInstance.StopDozingOff(true);
                 }
             }
-        }
 
-        
-        [HarmonyPatch(typeof(PauseMenuManager), "OnActivateMenu")]
-        public class PauseMenu_OpenPatch
-        {
-            static void Prefix()
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(PauseMenuManager), "OnActivateMenu")]
+            static void PauseMenuManager_OnActivateMenu_Prefix()
             {
                 // This runs *before* the pause menu action
                 DozeAnywhere.Instance.SaveCurrentInputMode();
