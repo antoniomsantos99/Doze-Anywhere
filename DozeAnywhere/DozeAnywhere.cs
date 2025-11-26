@@ -42,7 +42,7 @@ namespace DozeAnywhere
         {
             base.SetupPauseMenu(pauseMenu);
 
-            pauseMenu.MakeSimpleButton("DOZE OFF", 3, true).OnSubmitAction += () =>
+            pauseMenu.MakeSimpleButton(UITextLibrary.GetString(UITextType.CampfireDozeOff).ToUpper(), 3, true).OnSubmitAction += () =>
             {
                 Locator.GetSceneMenuManager().pauseMenu.OnSkipToNextTimeLoop();
                 DozeOff();
