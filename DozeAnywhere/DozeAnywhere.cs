@@ -139,6 +139,7 @@ namespace DozeAnywhere
         private bool CanDozeOff()
         {
             return TimeLoop.IsTimeFlowing() && TimeLoop.GetSecondsRemaining() > 85f;
+            return TimeLoop.IsTimeFlowing() && TimeLoop.GetSecondsRemaining() > 85f && LoadManager.GetCurrentScene() != OWScene.EyeOfTheUniverse;
         }
 
         private void StartDozingOff()
