@@ -18,6 +18,7 @@ namespace DozeAnywhere
 
         private ScreenPrompt _wakePrompt;
         private InputMode _previousInputMode;
+        private NotificationData _cannotDozeNotif;
 
         public void Awake()
         {
@@ -125,6 +126,9 @@ namespace DozeAnywhere
             if (!CanDozeOff())
             {
                 ModHelper.Console.WriteLine("[DozeAnywhere] Cannot doze off now.");
+                if (_cannotDozeNotif == null) _cannotDozeNotif = new NotificationData(NotificationTarget.Player, "Cannot doze at the moment", 3f, true);
+                NotificationManager.SharedInstance.PostNotification(_cannotDozeNotif, false);
+                OWInput.ChangeInputMode(_previousInputMode);
                 return;
             }
 
