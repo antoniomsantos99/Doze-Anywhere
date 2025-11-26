@@ -20,6 +20,8 @@ namespace DozeAnywhere
         private InputMode _previousInputMode;
         private NotificationData _cannotDozeNotif;
 
+
+        // Engine Logic
         public void Awake()
         {
             Instance = this;
@@ -43,16 +45,17 @@ namespace DozeAnywhere
         {
             [HarmonyPrefix]
             [HarmonyPatch(typeof(DeathManager), nameof(DeathManager.KillPlayer))]
-            public static void DeathManager_KillPlayer_Prefix()
+            [HarmonyPatch(typeof(PlayerResources), nameof(PlayerResources.ApplyInstantDamage))]
+            [HarmonyPatch(typeof(PlayerResources), nameof(PlayerResources.ApplySuitPuncture))]
+            public static void Sudden_Wake_Up_Prefixes()
             {
                 DozeAnywhere ModInstance = DozeAnywhere.Instance;
                 if (ModInstance._isFastForwarding)
                 {
-                    ModInstance.ModHelper.Console.WriteLine("Died while dozing. Stop fastforwarding");
+                    ModInstance.ModHelper.Console.WriteLine("Damaged or killed while dozing. Stop fastforwarding");
                     ModInstance.StopDozingOff(true);
                 }
             }
-
 
             [HarmonyPrefix]
             [HarmonyPatch(typeof(PauseMenuManager), "OnActivateMenu")]
@@ -62,23 +65,6 @@ namespace DozeAnywhere
                 DozeAnywhere.Instance.SaveCurrentInputMode();
             }
         }
-
-        public void SaveCurrentInputMode()
-        {
-            _previousInputMode = OWInput.GetInputMode();
-        }
-
-        public override void SetupPauseMenu(IPauseMenuManager pauseMenu)
-        {
-            base.SetupPauseMenu(pauseMenu);
-
-            pauseMenu.MakeSimpleButton(UITextLibrary.GetString(UITextType.CampfireDozeOff).ToUpper(), 3, true).OnSubmitAction += () =>
-            {
-                Locator.GetSceneMenuManager().pauseMenu.OnSkipToNextTimeLoop();
-                DozeOff();
-            };
-        }
-
 
         private void Update()
         {
@@ -119,12 +105,37 @@ namespace DozeAnywhere
             }
         }
 
+        // Menu and Input Functions
+        public void SaveCurrentInputMode()
+        {
+            _previousInputMode = OWInput.GetInputMode();
+        }
+
+        public override void SetupPauseMenu(IPauseMenuManager pauseMenu)
+        {
+            base.SetupPauseMenu(pauseMenu);
+
+            pauseMenu.MakeSimpleButton(UITextLibrary.GetString(UITextType.CampfireDozeOff).ToUpper(), 3, true).OnSubmitAction += () =>
+            {
+                Locator.GetSceneMenuManager().pauseMenu.OnSkipToNextTimeLoop();
+                DozeOff();
+            };
+        }
+
+        // Doze Logic
+        private bool CanDozeOff()
+        {
+            // Loop has started and have more than 85 seconds remaining and not in the Eye of The Universe
+            return TimeLoop.IsTimeFlowing() && TimeLoop.GetSecondsRemaining() > 85f && LoadManager.GetCurrentScene() != OWScene.EyeOfTheUniverse;
+        }
+
         private void DozeOff()
         {
             if (!CanDozeOff())
             {
                 ModHelper.Console.WriteLine("[DozeAnywhere] Cannot doze off now.");
-                if (_cannotDozeNotif == null) _cannotDozeNotif = new NotificationData(NotificationTarget.Player, "Cannot doze at the moment", 3f, true);
+                // Create and post notification if failed (Add text for other languages in the future?)
+                if (_cannotDozeNotif == null) _cannotDozeNotif = new NotificationData(NotificationTarget.Player, "CANNOT DOZE AT THE MOMENT", 3f, true);
                 NotificationManager.SharedInstance.PostNotification(_cannotDozeNotif, false);
                 OWInput.ChangeInputMode(_previousInputMode);
                 return;
@@ -134,11 +145,6 @@ namespace DozeAnywhere
             StartDozingOff();
         }
 
-        private bool CanDozeOff()
-        {
-            return TimeLoop.IsTimeFlowing() && TimeLoop.GetSecondsRemaining() > 85f && LoadManager.GetCurrentScene() != OWScene.EyeOfTheUniverse;
-        }
-
         private void StartDozingOff()
         {
             if (_isSleeping)
@@ -146,11 +152,11 @@ namespace DozeAnywhere
 
             _isSleeping = true;
 
+            // Create Wake prompt
             if (_wakePrompt == null)
             {
                 _wakePrompt = new ScreenPrompt(InputLibrary.interact, UITextLibrary.GetString(UITextType.WakeUpPrompt), 0, ScreenPrompt.DisplayState.Normal, false);
             }
-
             Locator.GetPromptManager().AddScreenPrompt(_wakePrompt, PromptPosition.Center, false);
             _wakePrompt.SetVisibility(false);
 
@@ -175,28 +181,6 @@ namespace DozeAnywhere
 
             // Fast forward starts in 3 seconds (Add customizable value later?)
             _fastForwardStart = Time.timeSinceLevelLoad + 3f;
-        }
-
-        private void StartFastForwarding()
-        {
-            _isFastForwarding = true;
-
-            Locator.GetPlayerCamera().enabled = false;
-
-            // Lower max delta time for stability
-            OWTime.SetMaxDeltaTime(0.03333333f);
-
-            GlobalMessenger.FireEvent("StartFastForward");
-        }
-
-        private void StopFastForwarding()
-        {
-            _isFastForwarding = false;
-
-            OWTime.SetTimeScale(1f);
-            OWTime.SetMaxDeltaTime(0.0666667f);
-
-            GlobalMessenger.FireEvent("EndFastForward");
         }
 
         public void StopDozingOff(bool suddenDamage)
@@ -228,6 +212,29 @@ namespace DozeAnywhere
             OWInput.ChangeInputMode(_previousInputMode);
         }
 
+        // Fast Forwarding Logic
+        private void StartFastForwarding()
+        {
+            _isFastForwarding = true;
+
+            Locator.GetPlayerCamera().enabled = false;
+
+            // Lower max delta time for stability
+            OWTime.SetMaxDeltaTime(0.03333333f);
+
+            GlobalMessenger.FireEvent("StartFastForward");
+        }
+
+        private void StopFastForwarding()
+        {
+            _isFastForwarding = false;
+
+            // Reset time (Maybe previous time speed should be saved to restore in case another mod changes it)
+            OWTime.SetTimeScale(1f);
+            OWTime.SetMaxDeltaTime(0.0666667f);
+
+            GlobalMessenger.FireEvent("EndFastForward");
+        }
 
         private void OnWakeEvent()
         {
@@ -237,7 +244,6 @@ namespace DozeAnywhere
 
             StopDozingOff(false);
         }
-
 
     }
 }
