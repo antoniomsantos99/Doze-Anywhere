@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/ow-mods/owml/master/schemas/manifest_schema.json",
   "filename": "DozeAnywhere.dll",
   "author": "Tonecas",
-  "name": "DozeAnywhere",
+  "name": "Doze Anywhere",
   "uniqueName": "Tonecas.DozeAnywhere",
   "version": "1.0.0",
   "owmlVersion": "2.15.1",
