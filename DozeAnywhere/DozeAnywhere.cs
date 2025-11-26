@@ -22,7 +22,8 @@ namespace DozeAnywhere
         public void Awake()
         {
             Instance = this;
-            
+            Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), "Tonecas.DozeAnywhere");
+
         }
 
         public void Start()
@@ -34,13 +35,27 @@ namespace DozeAnywhere
             _ignoreWakeFramesUntil = Time.frameCount + 30;
 
             GlobalMessenger.AddListener("WakeUp", new Callback(OnWakeEvent));
-
-            new Harmony("Tonecas.DozeAnywhere").PatchAll(Assembly.GetExecutingAssembly());
         }
 
-        // Saves current input mode before opening the pause menu
-        [HarmonyPatch(typeof(PauseMenuManager), "OnSkipToNextTimeLoop")]
-        public class Patch_PauseMenuSkipToNextTimeLoop
+        [HarmonyPatch]
+        public class HarmonyPatches
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DeathManager), nameof(DeathManager.KillPlayer))]
+            public static void DeathManager_KillPlayer_Prefix()
+            {
+                DozeAnywhere ModInstance = DozeAnywhere.Instance;
+                if (ModInstance._isFastForwarding)
+                {
+                    ModInstance.ModHelper.Console.WriteLine("Died while doozing. Stop fastforwarding");
+                    ModInstance.StopDozingOff();
+                }
+            }
+        }
+
+        
+        [HarmonyPatch(typeof(PauseMenuManager), "OnActivateMenu")]
+        public class PauseMenu_OpenPatch
         {
             static void Prefix()
             {
@@ -169,6 +184,16 @@ namespace DozeAnywhere
             GlobalMessenger.FireEvent("StartFastForward");
         }
 
+        private void StopFastForwarding()
+        {
+            _isFastForwarding = false;
+
+            OWTime.SetTimeScale(1f);
+            OWTime.SetMaxDeltaTime(0.0666667f);
+
+            GlobalMessenger.FireEvent("EndFastForward");
+        }
+
         public void StopDozingOff()
         {
             if (!_isSleeping)
@@ -179,16 +204,11 @@ namespace DozeAnywhere
             // Stop fast forward
             if (_isFastForwarding)
             {
-                _isFastForwarding = false;
+                StopFastForwarding();
                 _wakePrompt.SetVisibility(false);
-
-                Locator.GetPlayerCamera().enabled = true;
-
-                OWTime.SetTimeScale(1f);
-                OWTime.SetMaxDeltaTime(0.0666667f);
-
-                GlobalMessenger.FireEvent("EndFastForward");
             }
+
+            Locator.GetPlayerCamera().enabled = true;
 
             // Open Eyes
             Locator.GetPlayerCamera().GetComponent<PlayerCameraEffectController>()
