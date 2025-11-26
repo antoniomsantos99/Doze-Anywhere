@@ -48,8 +48,8 @@ namespace DozeAnywhere
                 DozeAnywhere ModInstance = DozeAnywhere.Instance;
                 if (ModInstance._isFastForwarding)
                 {
-                    ModInstance.ModHelper.Console.WriteLine("Died while doozing. Stop fastforwarding");
-                    ModInstance.StopDozingOff();
+                    ModInstance.ModHelper.Console.WriteLine("Died while dozing. Stop fastforwarding");
+                    ModInstance.StopDozingOff(true);
                 }
             }
         }
@@ -97,14 +97,14 @@ namespace DozeAnywhere
                 // Player wakes up by pressing any interact
                 if (OWInput.IsNewlyPressed(InputLibrary.interact, InputMode.All))
                 {
-                    StopDozingOff();
+                    StopDozingOff(false);
                     return;
                 }
 
                 // Stop if near loop end (value equal to campfire's)
                 if (TimeLoop.GetSecondsRemaining() < 85f)
                 {
-                    StopDozingOff();
+                    StopDozingOff(false);
                     return;
                 }
 
@@ -202,7 +202,7 @@ namespace DozeAnywhere
             GlobalMessenger.FireEvent("EndFastForward");
         }
 
-        public void StopDozingOff()
+        public void StopDozingOff(bool suddenDamage)
         {
             if (!_isSleeping)
                 return;
@@ -225,7 +225,7 @@ namespace DozeAnywhere
 
             // Audio cleanup
             Locator.GetAudioMixer().UnmixSleepAtCampfire(3f);
-            Locator.GetPlayerAudioController().OnStopSleepingAtCampfire(true, false);
+            Locator.GetPlayerAudioController().OnStopSleepingAtCampfire(true, suddenDamage);
 
             // Controls back to normal
             OWInput.ChangeInputMode(_previousInputMode);
@@ -238,7 +238,7 @@ namespace DozeAnywhere
             if (Time.frameCount < _ignoreWakeFramesUntil)
                 return;
 
-            StopDozingOff();
+            StopDozingOff(false);
         }
 
 
