@@ -92,12 +92,7 @@ namespace DozeAnywhere
 
             if (_isFastForwarding)
             {
-                if (_wakePrompt == null)
-                {
-                    _wakePrompt = new ScreenPrompt(InputLibrary.interact, UITextLibrary.GetString(UITextType.WakeUpPrompt), 0, ScreenPrompt.DisplayState.Normal, false);
-                    Locator.GetPromptManager().AddScreenPrompt(_wakePrompt, PromptPosition.Center);
-                }
-                _wakePrompt.SetVisibility(true);
+                _wakePrompt.SetVisibility(OWInput.IsInputMode(InputMode.None) && Time.timeSinceLevelLoad - _fastForwardStart > 3f);
                 // Player wakes up by pressing any interact
                 if (OWInput.IsNewlyPressed(InputLibrary.interact, InputMode.All))
                 {
@@ -148,6 +143,14 @@ namespace DozeAnywhere
                 return;
 
             _isSleeping = true;
+
+            if (_wakePrompt == null)
+            {
+                _wakePrompt = new ScreenPrompt(InputLibrary.interact, UITextLibrary.GetString(UITextType.WakeUpPrompt), 0, ScreenPrompt.DisplayState.Normal, false);
+            }
+
+            Locator.GetPromptManager().AddScreenPrompt(_wakePrompt, PromptPosition.Center, false);
+            _wakePrompt.SetVisibility(false);
 
             // Unequip tools
             Locator.GetToolModeSwapper().UnequipTool();
@@ -205,8 +208,9 @@ namespace DozeAnywhere
             if (_isFastForwarding)
             {
                 StopFastForwarding();
-                _wakePrompt.SetVisibility(false);
             }
+            _wakePrompt.SetVisibility(false);
+            Locator.GetPromptManager().RemoveScreenPrompt(this._wakePrompt);
 
             Locator.GetPlayerCamera().enabled = true;
 
