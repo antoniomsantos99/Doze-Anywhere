@@ -17,6 +17,7 @@ namespace DozeAnywhere
         private int _ignoreWakeFramesUntil = -1;
 
         private ScreenPrompt _wakePrompt;
+        private InputMode _previousInputMode;
 
         public void Awake()
         {
@@ -37,6 +38,21 @@ namespace DozeAnywhere
             new Harmony("Tonecas.DozeAnywhere").PatchAll(Assembly.GetExecutingAssembly());
         }
 
+        // Saves current input mode before opening the pause menu
+        [HarmonyPatch(typeof(PauseMenuManager), "OnSkipToNextTimeLoop")]
+        public class Patch_PauseMenuSkipToNextTimeLoop
+        {
+            static void Prefix()
+            {
+                // This runs *before* the pause menu action
+                DozeAnywhere.Instance.SaveCurrentInputMode();
+            }
+        }
+
+        public void SaveCurrentInputMode()
+        {
+            _previousInputMode = OWInput.GetInputMode();
+        }
 
         public override void SetupPauseMenu(IPauseMenuManager pauseMenu)
         {
@@ -183,7 +199,7 @@ namespace DozeAnywhere
             Locator.GetPlayerAudioController().OnStopSleepingAtCampfire(true, false);
 
             // Controls back to normal
-            OWInput.ChangeInputMode(InputMode.Character);
+            OWInput.ChangeInputMode(_previousInputMode);
         }
 
 
